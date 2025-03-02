@@ -39,7 +39,6 @@ impl<'a> TryFrom<&'a [&'a str]> for Command<'a> {
 }
 
 fn handle_path(cmd: &str) -> Result<Option<String>, ShellError> {
-    let mut result = None;
     let path_value = env!("PATH");
     for dir in path_value.split(':') {
         let dir_path = PathBuf::from(dir);
@@ -49,9 +48,9 @@ fn handle_path(cmd: &str) -> Result<Option<String>, ShellError> {
         for file in dir_path.read_dir()? {
             let file = file?;
             if file.file_name() == OsString::from(&cmd) {
-                result = Some(file.path().to_string_lossy().to_string());
+                return Ok(Some(file.path().to_string_lossy().to_string()));
             }
         }
     }
-    Ok(result)
+    Ok(None)
 }
