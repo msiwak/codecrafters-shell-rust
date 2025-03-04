@@ -1,12 +1,12 @@
 mod builtin;
 mod command_type;
 
+use pathsearch::find_executable_in_path;
 use std::{ffi::OsString, path::PathBuf};
 
+use crate::error::ShellError;
 pub(crate) use builtin::Builtin;
 pub(crate) use command_type::CommandType;
-
-use crate::error::ShellError;
 
 pub(crate) struct Command<'a> {
     pub(crate) command_type: CommandType,
@@ -26,7 +26,7 @@ impl<'a> TryFrom<&'a [&'a str]> for Command<'a> {
         let maybe_builtin = Builtin::try_from(from[0]).ok();
         let cmd_type = match maybe_builtin {
             Some(b) => CommandType::Builtin(b),
-            None => match handle_path(from[0])? {
+            None => match handle_path(from[0]) {
                 Some(path) => CommandType::Executable(path),
                 None => CommandType::Unknown,
             },
@@ -38,19 +38,6 @@ impl<'a> TryFrom<&'a [&'a str]> for Command<'a> {
     }
 }
 
-fn handle_path(cmd: &str) -> Result<Option<String>, ShellError> {
-    let path_value = env!("PATH");
-    for dir in path_value.split(':') {
-        let dir_path = PathBuf::from(dir);
-        if !dir_path.exists() {
-            continue;
-        }
-        for file in dir_path.read_dir()? {
-            let file = file?;
-            if file.file_name() == OsString::from(&cmd) {
-                return Ok(Some(file.path().to_string_lossy().to_string()));
-            }
-        }
-    }
-    Ok(None)
+fn handle_path(cmd: &str) -> Option<String> {
+    find_executable_in_path(cmd).map(|f| f.to_string_lossy().to_string())
 }
