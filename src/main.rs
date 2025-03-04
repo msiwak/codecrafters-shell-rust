@@ -50,7 +50,13 @@ fn run() -> Result<i32, ShellError> {
                     }
                 }
             },
-            CommandType::Executable(_) => todo!(),
+            CommandType::Executable(_) => {
+                let mut command = std::process::Command::new(cmd.args[0]);
+                cmd.args[1..].iter().for_each(|arg| {
+                    command.arg(arg);
+                });
+                std::io::stdout().write_all(&command.output()?.stdout)?;
+            }
         }
     }
     Ok(return_code)
