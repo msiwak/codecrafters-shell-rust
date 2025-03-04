@@ -2,7 +2,7 @@
 mod command;
 mod error;
 
-use command::{Builtin, Command, CommandType};
+use command::{Command, CommandType};
 use error::ShellError;
 
 use std::io::{self, Write};
@@ -33,23 +33,12 @@ fn run() -> Result<i32, ShellError> {
         let cmd = Command::try_from(&cmd_elements[..])?;
         match cmd.command_type {
             CommandType::Unknown => println!("{}: command not found", line),
-            CommandType::Builtin(builtin) => match builtin {
-                Builtin::Echo => println!("{}", cmd.args[1..].join(" ")),
-                Builtin::Exit => {
+            CommandType::Builtin(builtin) => {
+                if let Some(code) = builtin.execute(cmd.args)? {
                     run = false;
-                    return_code = 0;
+                    return_code = code;
                 }
-                Builtin::Type => {
-                    let sub_cmd = Command::try_from(&cmd.args[1..])?;
-                    match sub_cmd.command_type {
-                        CommandType::Unknown => println!("{}: not found", sub_cmd.args[0]),
-                        CommandType::Builtin(_) => {
-                            println!("{} is a shell builtin", sub_cmd.args[0])
-                        }
-                        CommandType::Executable(path) => println!("{} is {path}", sub_cmd.args[0]),
-                    }
-                }
-            },
+            }
             CommandType::Executable(_) => {
                 let mut command = std::process::Command::new(cmd.args[0]);
                 cmd.args[1..].iter().for_each(|arg| {
